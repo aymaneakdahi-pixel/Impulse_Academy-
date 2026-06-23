@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Impulse Academy – Générateur d'attestations</title>
+  <style>
+    /* ── RESET ── */
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --navy:#0F1F4A; --blue:#2F80ED; --light:#EAF3FF;
+      --white:#FFFFFF; --gray:#4A4A4A; --border:#C8D9F0;
+      --green:#27AE60; --red:#E74C3C; --orange:#F39C12;
+      --radius:10px; --shadow:0 2px 18px rgba(15,31,74,0.10);
+    }
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#F2F5FB;color:var(--gray);min-height:100vh;display:flex;flex-direction:column}
+
+    /* ── HEADER ── */
+    header{background:var(--navy);height:68px;padding:0 36px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(0,0,0,.22)}
+    .logo{display:flex;align-items:center;gap:13px}
+    .logo-icon{width:40px;height:40px;background:var(--blue);border-radius:9px;display:flex;align-items:center;justify-content:center}
+    .logo-icon svg{width:22px;height:22px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round}
+    .logo-name{color:white;font-size:1.12rem;font-weight:800;letter-spacing:.01em}
+    .logo-sub{color:#7DB8F7;font-size:.75rem;font-weight:400;margin-top:1px}
+    .header-right{display:flex;align-items:center;gap:10px}
+    .badge{background:rgba(47,128,237,.2);border:1px solid rgba(47,128,237,.4);color:#7DB8F7;font-size:.72rem;padding:4px 11px;border-radius:20px;font-weight:700;letter-spacing:.05em}
+    .badge.green{background:rgba(39,174,96,.15);border-color:rgba(39,174,96,.3);color:#6fcf97}
+    .btn-logout{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#aec8f0;font-size:.75rem;padding:5px 13px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:600;transition:.15s}
+    .btn-logout:hover{background:rgba(255,255,255,.15);color:white}
+
+    /* ── LAYOUT ── */
+    main{flex:1;max-width:1060px;margin:34px auto;padding:0 18px;width:100%}
+    .page-title{text-align:center;margin-bottom:32px}
+    .page-title h1{color:var(--navy);font-size:1.65rem;font-weight:800}
+    .page-title p{color:#6B82A8;margin-top:7px;font-size:.96rem}
+
+    /* Grid 2 colonnes */
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+    @media(max-width:720px){.grid2{grid-template-columns:1fr}}
+
+    /* ── CARDS ── */
+    .card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:20px;overflow:hidden}
+    .card-head{background:var(--navy);color:white;padding:13px 20px;font-size:.8rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+    .card-head svg{width:15px;height:15px;stroke:white;fill:none;stroke-width:2.2;stroke-linecap:round;flex-shrink:0;opacity:.75}
+    .card-body{padding:20px}
+
+    /* ── FORM ── */
+    .field{margin-bottom:15px}
+    .field:last-child{margin-bottom:0}
+    .field label{display:block;font-size:.77rem;font-weight:700;color:var(--navy);margin-bottom:5px;text-transform:uppercase;letter-spacing:.035em}
+    .field label .opt{color:#9AABCA;font-weight:400;text-transform:none;font-size:.73rem}
+    input[type=text],input[type=date],select,textarea{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:.95rem;color:var(--gray);background:var(--white);transition:border-color .18s,box-shadow .18s;outline:none;font-family:inherit}
+    input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(47,128,237,.12)}
+    select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%232F80ED' stroke-width='1.7' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:34px;cursor:pointer}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+    /* Badge RPPS indicator */
+    .rpps-badge{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:5px 12px;border-radius:20px;font-size:.78rem;font-weight:700;
+      margin-top:8px;
+    }
+    .rpps-badge.requis{background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.3);color:var(--red)}
+    .rpps-badge.masque{background:rgba(39,174,96,.08);border:1px solid rgba(39,174,96,.25);color:var(--green)}
+    .rpps-badge svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5;flex-shrink:0}
+
+    /* ── MODÈLE UPLOAD ── */
+    .modele-zone{border:2px dashed var(--border);border-radius:8px;padding:18px;text-align:center;background:var(--light);position:relative;cursor:pointer;transition:.2s}
+    .modele-zone:hover{border-color:var(--blue);background:#dff0ff}
+    .modele-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+    .modele-zone svg{width:28px;height:28px;stroke:var(--blue);fill:none;stroke-width:1.8;margin-bottom:6px}
+    .modele-zone p{color:var(--navy);font-weight:700;font-size:.9rem}
+    .modele-zone small{color:#6B82A8;font-size:.78rem}
+    .modele-ok{display:none;align-items:center;gap:8px;background:#e8faf0;border:1.5px solid #a8d5b5;border-radius:8px;padding:11px 15px;font-size:.88rem;color:#1a7a40;font-weight:600}
+    .modele-ok svg{width:18px;height:18px;stroke:#27AE60;fill:none;stroke-width:2.5;flex-shrink:0}
+    .modele-ok.show{display:flex}
+
+    /* ── PARTICIPANTS ── */
+    .import-zone{border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;background:var(--light);position:relative;cursor:pointer;transition:.2s;margin-bottom:14px}
+    .import-zone:hover{border-color:var(--blue)}
+    .import-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+    .import-zone svg{width:24px;height:24px;stroke:var(--blue);fill:none;stroke-width:1.8;margin-bottom:4px}
+    .import-zone p{color:var(--navy);font-weight:600;font-size:.87rem}
+    .import-zone small{color:#6B82A8;font-size:.75rem}
+
+    .divider{display:flex;align-items:center;gap:10px;margin:12px 0;color:#9AABCA;font-size:.78rem;font-weight:700;letter-spacing:.05em}
+    .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+    .add-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
+    .add-row .field{margin-bottom:0;flex:1;min-width:130px}
+    #rppsFieldWrap{display:none;flex:1;min-width:120px}
+    #rppsFieldWrap.show{display:block}
+
+    .btn{border:none;border-radius:7px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .18s,transform .1s;font-family:inherit}
+    .btn:active{transform:scale(.98)}
+    .btn-sm{padding:9px 14px;font-size:.85rem}
+    .btn-blue{background:var(--blue);color:white}
+    .btn-blue:hover{background:#1a6fd4}
+    .btn-navy{background:var(--navy);color:white}
+    .btn-navy:hover{background:#1a3270}
+    .btn-outline{background:white;color:var(--navy);border:1.5px solid var(--border)}
+    .btn-outline:hover{border-color:var(--blue);color:var(--blue)}
+    .btn-sm svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round}
+
+    /* Liste participants */
+    .p-list{border:1.5px solid var(--border);border-radius:8px;overflow:hidden;max-height:380px;overflow-y:auto}
+    .p-list::-webkit-scrollbar{width:5px}
+    .p-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+    .p-empty{padding:28px;text-align:center;color:#9AABCA;font-style:italic;font-size:.88rem}
+    .p-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);background:white;transition:background .12s}
+    .p-item:last-child{border-bottom:none}
+    .p-item:hover{background:var(--light)}
+    .p-dot{width:18px;height:18px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .p-dot svg{width:10px;height:10px;stroke:white;fill:none;stroke-width:3;stroke-linecap:round}
+    /* Point rouge si RPPS manquant et requis */
+    .p-dot.missing{background:var(--red)}
+    .p-info{flex:1;min-width:0}
+    .p-name{font-weight:700;color:var(--navy);font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .p-meta{font-size:.73rem;color:#9AABCA;margin-top:1px}
+    .p-actions{display:flex;gap:5px;flex-shrink:0}
+    .p-btn{background:none;border:none;cursor:pointer;padding:4px;border-radius:4px;color:#C8D9F0;transition:color .15s;display:flex;align-items:center}
+    .p-btn:hover.edit{color:var(--blue)}
+    .p-btn:hover.del{color:var(--red)}
+    .p-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+    .p-count{text-align:right;font-size:.78rem;color:#6B82A8;margin-top:7px;font-weight:600}
+    .rpps-chip{background:var(--light);border-radius:4px;padding:1px 7px;font-size:.7rem;color:var(--blue);font-weight:700;border:1px solid var(--border)}
+    .rpps-warn{background:rgba(231,76,60,.08);border-radius:4px;padding:1px 7px;font-size:.7rem;color:var(--red);font-weight:700;border:1px solid rgba(231,76,60,.25)}
+
+    /* Modale édition */
+    .modal-bg{display:none;position:fixed;inset:0;background:rgba(15,31,74,.45);z-index:1000;align-items:center;justify-content:center}
+    .modal-bg.show{display:flex}
+    .modal{background:white;border-radius:12px;padding:26px;width:400px;max-width:94vw;box-shadow:0 8px 40px rgba(15,31,74,.22)}
+    .modal h3{color:var(--navy);font-size:1.05rem;margin-bottom:18px}
+    .modal-actions{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
+
+    /* ── APERÇU ── */
+    .apercu-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+    @media(max-width:720px){.apercu-grid{grid-template-columns:1fr 1fr}}
+    .apercu-cell{background:var(--light);border-radius:8px;padding:12px 15px}
+    .apercu-cell .lbl{font-size:.72rem;font-weight:700;color:#6B82A8;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+    .apercu-cell .val{font-weight:800;color:var(--navy);font-size:.97rem}
+    .apercu-cell .val.big{font-size:1.8rem;color:var(--blue)}
+
+    /* ── BOUTON GENERER ── */
+    .btn-generer{width:100%;padding:17px;font-size:1.05rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;border-radius:var(--radius);box-shadow:0 4px 18px rgba(15,31,74,.18);justify-content:center}
+    .btn-generer:disabled{background:#8A9BBE;cursor:not-allowed;box-shadow:none}
+    .btn-generer svg{width:20px;height:20px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round}
+
+    /* Progress */
+    .progress-wrap{display:none;margin-top:14px}
+    .progress-wrap.show{display:block}
+    .progress-bg{height:9px;background:var(--light);border-radius:5px;overflow:hidden}
+    .progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),#5b9df5);border-radius:5px;transition:width .4s;width:0%}
+    .progress-lbl{text-align:center;font-size:.8rem;color:var(--blue);font-weight:700;margin-top:6px}
+
+    /* Error */
+    .err-box{display:none;background:#fff0ef;border:1.5px solid #f5c6c3;border-radius:8px;padding:13px 16px;color:var(--red);font-size:.88rem;font-weight:600;margin-top:12px;align-items:center;gap:9px}
+    .err-box.show{display:flex}
+    .err-box svg{width:18px;height:18px;stroke:var(--red);fill:none;stroke-width:2;flex-shrink:0}
+
+    /* ── RÉSULTAT ── */
+    .result-card{display:none;margin-top:20px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);border:1.5px solid #a8d5b5}
+    .result-card.show{display:block;animation:fadeIn .35s ease}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+    .result-head{background:var(--green);color:white;padding:14px 22px;display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.02rem}
+    .result-head svg{width:20px;height:20px;stroke:white;fill:none;stroke-width:2.8;stroke-linecap:round;flex-shrink:0}
+    .result-body{background:white;padding:20px}
+    .result-files{margin:12px 0;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;max-height:200px;overflow-y:auto}
+    .result-file{display:flex;align-items:center;gap:9px;padding:8px 14px;border-bottom:1px solid var(--border);font-size:.85rem}
+    .result-file:last-child{border-bottom:none}
+    .result-file svg{width:14px;height:14px;stroke:var(--green);fill:none;stroke-width:2.5;flex-shrink:0}
+    .result-file span{color:var(--navy);font-weight:600}
+    .result-file .size{color:#9AABCA;font-size:.75rem;margin-left:auto}
+    .result-err{background:#fff0ef;border-radius:7px;padding:10px 14px;margin-top:10px;font-size:.83rem;color:var(--red)}
+    .result-err p{font-weight:700;margin-bottom:4px}
+    .result-actions{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+    .btn-dl{flex:1;min-width:180px;padding:12px 18px;font-size:.93rem;border-radius:8px;justify-content:center;text-decoration:none}
+    .btn-dl svg{width:17px;height:17px}
+
+    /* ── FOOTER ── */
+    footer{background:var(--navy);color:#7DB8F7;text-align:center;padding:20px;font-size:.8rem;margin-top:auto}
+    footer strong{color:white;display:block;font-size:.93rem;margin-bottom:4px}
+    .footer-badges{display:flex;justify-content:center;gap:12px;margin-top:9px;flex-wrap:wrap}
+    .fbadge{background:rgba(47,128,237,.15);border:1px solid rgba(47,128,237,.3);color:#7DB8F7;font-size:.7rem;padding:3px 9px;border-radius:12px;font-weight:700;letter-spacing:.04em}
+
+    /* Toggle Oui/Non */
+    .toggle-btn{padding:6px 18px;border-radius:6px;border:1.5px solid var(--border);background:white;color:#9AABCA;font-weight:700;font-size:.85rem;cursor:pointer;transition:.15s;font-family:inherit}
+    .toggle-btn.active{background:var(--blue);color:white;border-color:var(--blue)}
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <div>
+      <div class="logo-name">Impulse Academy</div>
+      <div class="logo-sub">Générateur d'attestations de formation</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="badge green">QUALIOPI</span>
+    <span class="badge">RADIOPROTECTION</span>
+    <button class="btn-logout" onclick="logout()">Déconnexion</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main>
+  <div class="page-title">
+    <h1>Générateur d'attestations de formation</h1>
+    <p>Outil interne Impulse Academy · Réutilisable pour toutes les sessions</p>
+  </div>
+
+  <div class="grid2">
+
+    <!-- COLONNE GAUCHE -->
+    <div>
+
+      <!-- 1. MODÈLE PPTX -->
+      <div class="card">
+        <div class="card-head">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6"/></svg>
+          Modèle PowerPoint
+        </div>
+        <div class="card-body">
+          <div id="modeleZone" class="modele-zone" style="display:none">
+            <input type="file" id="modeleInput" accept=".pptx" onchange="uploadModele(event)"/>
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M12 18v-6M9 15l3-3 3 3"/></svg>
+            <p>Déposer le modèle .pptx</p>
+            <small>Modèle Impulse Academy (avec placeholders { {…} })</small>
+          </div>
+          <div class="modele-ok show" id="modeleOk">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            Modèle chargé · modele_global.pptx
+            <button class="btn btn-sm btn-outline" style="margin-left:auto;padding:4px 10px;font-size:.75rem" onclick="changerModele()">Changer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. SESSION -->
+      <div class="card">
+        <div class="card-head">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Informations de la session
+        </div>
+        <div class="card-body">
+
+          <!-- Type de formation prédéfini -->
+          <div class="field">
+            <label>Type de formation</label>
+            <select id="formationSelect" onchange="onFormationChange()">
+              <option value="">— Sélectionnez un type de formation —</option>
+            </select>
+            <!-- Indicateur RPPS dynamique -->
+            <div id="rppsBadge" style="display:none"></div>
+          </div>
+
+          <!-- Dates -->
+          <div class="field">
+            <label>Dates de formation</label>
+            <div class="row2">
+              <input type="date" id="dateDebut" value="2026-06-29" onchange="updateApercu()"/>
+              <input type="date" id="dateFin"   value="2026-06-30" onchange="updateApercu()"/>
+            </div>
+          </div>
+
+          <div class="row2">
+            <div class="field">
+              <label>Date de délivrance</label>
+              <input type="date" id="dateDeliv" value="2026-06-30" onchange="updateApercu()"/>
+            </div>
+            <div class="field">
+              <label>Durée de validité</label>
+              <div style="display:flex;gap:7px;margin-bottom:7px">
+                <button type="button" id="dureeOui" class="toggle-btn active" onclick="setDuree(true)">Oui</button>
+                <button type="button" id="dureeNon" class="toggle-btn"        onclick="setDuree(false)">Non</button>
+              </div>
+              <div id="dureeSelect">
+                <select id="dureeValidite">
+                  <option value="5 ans">5 ans</option>
+                  <option value="3 ans">3 ans</option>
+                  <option value="10 ans">10 ans</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /col gauche -->
+
+    <!-- COLONNE DROITE -->
+    <div>
+
+      <!-- 3. PARTICIPANTS -->
+      <div class="card">
+        <div class="card-head">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+          Participants
+        </div>
+        <div class="card-body">
+
+          <div class="import-zone" id="importZone">
+            <input type="file" id="excelInput" accept=".xlsx,.xls,.csv" onchange="importExcel(event)"/>
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M12 18v-6M9 15l3-3 3 3"/></svg>
+            <p>Importer Excel / CSV</p>
+            <small>Colonnes : Nom_Prenom · RPPS (si requis)</small>
+          </div>
+
+          <div class="divider">ou ajouter manuellement</div>
+
+          <div class="add-row">
+            <div class="field">
+              <label>Nom Prénom</label>
+              <input type="text" id="inputNom" placeholder="ex: DUPONT Marie" onkeydown="if(event.key==='Enter')addParticipant()"/>
+            </div>
+            <div id="rppsFieldWrap">
+              <div class="field">
+                <label>N°RPPS <span class="opt">(obligatoire)</span></label>
+                <input type="text" id="inputRpps" placeholder="10001234567" maxlength="15" onkeydown="if(event.key==='Enter')addParticipant()"/>
+              </div>
+            </div>
+            <button class="btn btn-sm btn-blue" onclick="addParticipant()" style="margin-bottom:0;align-self:flex-end;white-space:nowrap">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Ajouter
+            </button>
+          </div>
+
+          <div class="p-list" id="pList">
+            <div class="p-empty" id="pEmpty">Aucun participant · importez un fichier ou ajoutez manuellement</div>
+          </div>
+          <div class="p-count" id="pCount"></div>
+
+        </div>
+      </div>
+
+    </div><!-- /col droite -->
+  </div>
+
+  <!-- 4. APERÇU -->
+  <div class="card">
+    <div class="card-head">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16" stroke-width="3"/></svg>
+      Aperçu de la génération
+    </div>
+    <div class="card-body">
+      <div class="apercu-grid">
+        <div class="apercu-cell"><div class="lbl">Attestations</div><div class="val big" id="apNb">0</div></div>
+        <div class="apercu-cell"><div class="lbl">Formation</div><div class="val" id="apFormation" style="font-size:.82rem;line-height:1.4">—</div></div>
+        <div class="apercu-cell"><div class="lbl">Période</div><div class="val" id="apDates">—</div></div>
+        <div class="apercu-cell"><div class="lbl">N°RPPS</div><div class="val" id="apRpps">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. GÉNÉRER -->
+  <button class="btn btn-navy btn-generer" id="btnGenerer" disabled onclick="generer()">
+    <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+    Générer les attestations
+  </button>
+
+  <div class="progress-wrap" id="progWrap">
+    <div class="progress-bg"><div class="progress-fill" id="progFill"></div></div>
+    <div class="progress-lbl" id="progLbl">Génération en cours…</div>
+  </div>
+
+  <div class="err-box" id="errBox">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16" stroke-width="3"/></svg>
+    <span id="errMsg"></span>
+  </div>
+
+  <!-- 6. RÉSULTAT -->
+  <div class="result-card" id="resultCard">
+    <div class="result-head">
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      <span id="resultTitle">Attestations générées avec succès !</span>
+    </div>
+    <div class="result-body">
+      <div class="result-files" id="resultFiles"></div>
+      <div class="result-err" id="resultErr" style="display:none"></div>
+      <div class="result-actions">
+        <a class="btn btn-blue btn-dl" id="btnDlZip" href="#" download>
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Télécharger ZIP (PDF + PPTX)
+        </a>
+        <a class="btn btn-outline btn-dl" id="btnDlPdf" href="#" download>
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6"/></svg>
+          PDF uniquement
+        </a>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODALE ÉDITION -->
+<div class="modal-bg" id="modalBg" onclick="closeModal(event)">
+  <div class="modal">
+    <h3>Modifier le participant</h3>
+    <input type="hidden" id="editIdx"/>
+    <div class="field"><label>Nom Prénom</label><input type="text" id="editNom"/></div>
+    <div class="field" id="editRppsWrap" style="display:none">
+      <label>N°RPPS <span class="opt">(obligatoire pour cette formation)</span></label>
+      <input type="text" id="editRpps" maxlength="15"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-sm btn-outline" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-sm btn-blue" onclick="saveEdit()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <strong>Impulse Academy</strong>
+  Formations certifiées et engagées pour la sécurité nucléaire et médicale
+  <div class="footer-badges">
+    <span class="fbadge">QUALIOPI</span>
+    <span class="fbadge">RADIOPROTECTION</span>
+    <span class="fbadge">MÉDICAL</span>
+    <span class="fbadge">ARRÊTÉ 06/08/2024</span>
+  </div>
+</footer>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────
+let participants  = [];
+let dureeActive   = true;
+let formations    = [];       // chargées depuis l'API
+let formationActive = null;   // objet formation sélectionné
+
+// ── INIT ───────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  // Drag & drop import Excel
+  const iz = document.getElementById('importZone');
+  iz.addEventListener('dragover',  e => { e.preventDefault(); iz.style.borderColor = '#2F80ED'; });
+  iz.addEventListener('dragleave', () => { iz.style.borderColor = ''; });
+  iz.addEventListener('drop', e => {
+    e.preventDefault(); iz.style.borderColor = '';
+    const f = e.dataTransfer.files[0]; if (f) handleExcel(f);
+  });
+
+  // Charger les formations depuis l'API
+  await chargerFormations();
+
+  ['dateDebut','dateFin','dateDeliv','dureeValidite'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('change', updateApercu);
+      el.addEventListener('input',  updateApercu);
+    }
+  });
+
+  updateApercu();
+  renderParticipants();
+});
+
+// ── LOGOUT ─────────────────────────────────────────────────────
+async function logout() {
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.href = '/login';
+}
+
+// ── FORMATIONS ─────────────────────────────────────────────────
+async function chargerFormations() {
+  try {
+    const r = await fetch('/api/formations');
+    formations = await r.json();
+    const sel = document.getElementById('formationSelect');
+    formations.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f.id;
+      opt.textContent = f.label;
+      sel.appendChild(opt);
+    });
+  } catch(e) {
+    showErr('Impossible de charger les formations : ' + e.message);
+  }
+}
+
+function onFormationChange() {
+  const sel = document.getElementById('formationSelect');
+  const fid = sel.value;
+  formationActive = formations.find(f => f.id === fid) || null;
+
+  const rppsWrap = document.getElementById('rppsFieldWrap');
+  const badge    = document.getElementById('rppsBadge');
+
+  if (formationActive) {
+    const rppsReq = formationActive.rpps_required;
+
+    // Afficher/masquer le champ RPPS dans l'ajout manuel
+    rppsWrap.classList.toggle('show', rppsReq);
+
+    // Badge indicateur
+    badge.style.display = 'inline-flex';
+    if (rppsReq) {
+      badge.innerHTML = `
+        <span class="rpps-badge requis">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16" stroke-width="3"/></svg>
+          N°RPPS obligatoire pour cette formation
+        </span>`;
+    } else {
+      badge.innerHTML = `
+        <span class="rpps-badge masque">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          N°RPPS masqué — non requis pour cette formation
+        </span>`;
+    }
+  } else {
+    rppsWrap.classList.remove('show');
+    badge.style.display = 'none';
+    badge.innerHTML = '';
+  }
+
+  renderParticipants(); // re-render pour mettre à jour les indicateurs RPPS
+  updateApercu();
+  resetResult();
+}
+
+function getRppsRequired() {
+  return formationActive ? formationActive.rpps_required : false;
+}
+
+// ── MODÈLE ─────────────────────────────────────────────────────
+function changerModele() {
+  document.getElementById('modeleOk').classList.remove('show');
+  document.getElementById('modeleZone').style.display = 'block';
+}
+
+async function uploadModele(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const fd = new FormData(); fd.append('file', file);
+  try {
+    const r = await fetch('/api/upload-modele', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) {
+      document.getElementById('modeleOk').innerHTML = `
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:#27AE60;fill:none;stroke-width:2.5;flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>
+        Modèle chargé · ${esc(file.name)}
+        <button class="btn btn-sm btn-outline" style="margin-left:auto;padding:4px 10px;font-size:.75rem" onclick="changerModele()">Changer</button>`;
+      document.getElementById('modeleOk').classList.add('show');
+      document.getElementById('modeleZone').style.display = 'none';
+    } else { showErr(d.error || 'Erreur upload modèle'); }
+  } catch(e) { showErr('Erreur réseau : ' + e.message); }
+}
+
+// ── IMPORT EXCEL ────────────────────────────────────────────────
+function importExcel(event) { const f = event.target.files[0]; if (f) handleExcel(f); }
+
+async function handleExcel(file) {
+  const fd = new FormData(); fd.append('file', file);
+  try {
+    const r = await fetch('/api/import-excel', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.participants) {
+      d.participants.forEach(p => participants.push({ nom: p.nom, rpps: p.rpps || '' }));
+      renderParticipants(); updateApercu();
+      showNotif(`${d.count} participant(s) importé(s) depuis ${file.name}`);
+    } else { showErr(d.error || 'Impossible de lire le fichier'); }
+  } catch(e) { showErr('Erreur import : ' + e.message); }
+}
+
+// ── PARTICIPANTS ────────────────────────────────────────────────
+function addParticipant() {
+  const nom  = document.getElementById('inputNom').value.trim();
+  const rpps = document.getElementById('inputRpps').value.trim();
+  if (!nom) { document.getElementById('inputNom').focus(); return; }
+  participants.push({ nom, rpps });
+  document.getElementById('inputNom').value  = '';
+  document.getElementById('inputRpps').value = '';
+  document.getElementById('inputNom').focus();
+  renderParticipants(); updateApercu(); resetResult();
+}
+
+function removeParticipant(i) {
+  participants.splice(i, 1);
+  renderParticipants(); updateApercu(); resetResult();
+}
+
+function editParticipant(i) {
+  const p = participants[i];
+  document.getElementById('editIdx').value  = i;
+  document.getElementById('editNom').value  = p.nom;
+  document.getElementById('editRpps').value = p.rpps || '';
+  document.getElementById('editRppsWrap').style.display = getRppsRequired() ? 'block' : 'none';
+  document.getElementById('modalBg').classList.add('show');
+}
+
+function saveEdit() {
+  const i   = parseInt(document.getElementById('editIdx').value);
+  const nom = document.getElementById('editNom').value.trim();
+  const rpps= document.getElementById('editRpps').value.trim();
+  if (!nom) return;
+  participants[i] = { nom, rpps };
+  closeModal(); renderParticipants(); updateApercu();
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modalBg')) return;
+  document.getElementById('modalBg').classList.remove('show');
+}
+
+function renderParticipants() {
+  const list  = document.getElementById('pList');
+  const empty = document.getElementById('pEmpty');
+  Array.from(list.querySelectorAll('.p-item')).forEach(el => el.remove());
+  empty.style.display = participants.length ? 'none' : 'block';
+  const rppsReq = getRppsRequired();
+
+  participants.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.className = 'p-item';
+    const manquant = rppsReq && !p.rpps;
+    let metaHtml = '';
+    if (rppsReq) {
+      if (p.rpps) {
+        metaHtml = `<span class="rpps-chip">RPPS ${esc(p.rpps)}</span>`;
+      } else {
+        metaHtml = `<span class="rpps-warn">⚠ RPPS manquant</span>`;
+      }
+    }
+    div.innerHTML = `
+      <div class="p-dot${manquant ? ' missing' : ''}">
+        <svg viewBox="0 0 24 24">${manquant
+          ? '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'
+          : '<polyline points="20 6 9 17 4 12"/>'}</svg>
+      </div>
+      <div class="p-info">
+        <div class="p-name">${esc(p.nom)}</div>
+        <div class="p-meta">${metaHtml}</div>
+      </div>
+      <div class="p-actions">
+        <button class="p-btn edit" onclick="editParticipant(${i})" title="Modifier">
+          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="p-btn del" onclick="removeParticipant(${i})" title="Supprimer">
+          <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </div>`;
+    list.appendChild(div);
+  });
+
+  document.getElementById('pCount').textContent = participants.length > 0 ? `${participants.length} participant(s)` : '';
+
+  // Vérif : RPPS requis + au moins un manquant → désactiver le bouton
+  const rppsManquant = rppsReq && participants.some(p => !p.rpps);
+  const canGenerate  = participants.length > 0 && formationActive && !rppsManquant;
+  document.getElementById('btnGenerer').disabled = !canGenerate;
+}
+
+// ── APERÇU ─────────────────────────────────────────────────────
+function updateApercu() {
+  const d1 = document.getElementById('dateDebut').value;
+  const d2 = document.getElementById('dateFin').value;
+  document.getElementById('apNb').textContent = participants.length;
+  document.getElementById('apFormation').textContent = formationActive
+    ? formationActive.label.substring(0, 60) + (formationActive.label.length > 60 ? '…' : '')
+    : '—';
+  document.getElementById('apDates').textContent = (d1 ? fmtDate(d1) : '?') + ' → ' + (d2 ? fmtDate(d2) : '?');
+  document.getElementById('apRpps').textContent = !formationActive
+    ? '—'
+    : (formationActive.rpps_required ? 'Obligatoire' : 'Masqué');
+
+  const rppsReq      = getRppsRequired();
+  const rppsManquant = rppsReq && participants.some(p => !p.rpps);
+  const canGenerate  = participants.length > 0 && formationActive && !rppsManquant;
+  document.getElementById('btnGenerer').disabled = !canGenerate;
+}
+
+// ── DURÉE ──────────────────────────────────────────────────────
+function setDuree(actif) {
+  dureeActive = actif;
+  document.getElementById('dureeOui').classList.toggle('active',  actif);
+  document.getElementById('dureeNon').classList.toggle('active', !actif);
+  document.getElementById('dureeSelect').style.display = actif ? 'block' : 'none';
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+// ── GÉNÉRATION ──────────────────────────────────────────────────
+async function generer() {
+  resetResult(); hideErr();
+
+  if (!formationActive) { showErr('Veuillez sélectionner un type de formation.'); return; }
+
+  const dateDebut = fmtDate(document.getElementById('dateDebut').value);
+  const dateFin   = fmtDate(document.getElementById('dateFin').value);
+  const dateDeliv = fmtDate(document.getElementById('dateDeliv').value);
+
+  if (!dateDebut || !dateFin || !dateDeliv) { showErr('Veuillez remplir toutes les dates.'); return; }
+  if (participants.length === 0) { showErr('Ajoutez au moins un participant.'); return; }
+
+  // Vérif RPPS côté client
+  if (formationActive.rpps_required) {
+    const manquants = participants.filter(p => !p.rpps.trim()).map(p => p.nom);
+    if (manquants.length > 0) {
+      showErr(`N°RPPS manquant pour : ${manquants.join(', ')}`);
+      return;
+    }
+  }
+
+  const payload = {
+    formationId:   formationActive.id,
+    dateDebut,
+    dateFin,
+    dateDeliv,
+    dureeValidite: dureeActive ? document.getElementById('dureeValidite').value : '',
+    participants:  participants.map(p => ({
+      nom:  p.nom,
+      rpps: formationActive.rpps_required ? (p.rpps || '') : ''
+    }))
+  };
+
+  const prog = document.getElementById('progWrap');
+  const fill = document.getElementById('progFill');
+  const lbl  = document.getElementById('progLbl');
+  prog.classList.add('show');
+  document.getElementById('btnGenerer').disabled = true;
+
+  let pct = 0;
+  const ticker = setInterval(() => {
+    pct = Math.min(pct + Math.random() * 12, 88);
+    fill.style.width = pct + '%';
+    lbl.textContent  = `Génération en cours… ${Math.round(pct)}%`;
+  }, 400);
+
+  try {
+    const r = await fetch('/api/generer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    clearInterval(ticker);
+
+    if (!r.ok || !d.success) {
+      prog.classList.remove('show');
+      showErr(d.error || 'Erreur lors de la génération.');
+      document.getElementById('btnGenerer').disabled = false;
+      return;
+    }
+
+    fill.style.width = '100%';
+    lbl.textContent  = 'Terminé !';
+    setTimeout(() => { prog.classList.remove('show'); afficherResultat(d); }, 600);
+
+  } catch(e) {
+    clearInterval(ticker);
+    prog.classList.remove('show');
+    showErr('Erreur réseau : ' + e.message);
+    document.getElementById('btnGenerer').disabled = false;
+  }
+}
+
+function afficherResultat(d) {
+  document.getElementById('btnGenerer').disabled = false;
+  document.getElementById('resultTitle').textContent = `✓ ${d.count} attestation(s) générée(s) avec succès !`;
+
+  const fl = document.getElementById('resultFiles');
+  fl.innerHTML = '';
+  (d.generated || []).forEach(g => {
+    const div = document.createElement('div');
+    div.className = 'result-file';
+    const ko = Math.round((g.pdf_size || 0) / 1024);
+    div.innerHTML = `
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>${esc(g.pdf_file || g.nom)}</span>
+      <span class="size">${ko > 0 ? ko + ' Ko' : ''}</span>`;
+    fl.appendChild(div);
+  });
+
+  const errDiv = document.getElementById('resultErr');
+  if (d.errors && d.errors.length > 0) {
+    errDiv.style.display = 'block';
+    errDiv.innerHTML = `<p>⚠ ${d.errors.length} erreur(s) :</p>` +
+      d.errors.map(e => `<div>· ${esc(e.nom)} : ${esc(e.erreur)}</div>`).join('');
+  } else { errDiv.style.display = 'none'; }
+
+  document.getElementById('btnDlZip').href = d.zip_url;
+  const btnPdf = document.getElementById('btnDlPdf');
+  if (d.pdf_url) {
+    btnPdf.href = d.pdf_url;
+    btnPdf.style.display = '';
+  } else {
+    btnPdf.style.display = 'none';
+  }
+
+  const card = document.getElementById('resultCard');
+  card.classList.add('show');
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function resetResult() { document.getElementById('resultCard').classList.remove('show'); }
+function hideErr()      { document.getElementById('errBox').classList.remove('show'); }
+function showErr(msg) {
+  const b = document.getElementById('errBox');
+  document.getElementById('errMsg').textContent = msg;
+  b.classList.add('show');
+  b.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function showNotif(msg) {
+  const lbl = document.getElementById('progLbl');
+  const w   = document.getElementById('progWrap');
+  document.getElementById('progFill').style.width = '100%';
+  lbl.textContent = msg;
+  w.classList.add('show');
+  setTimeout(() => w.classList.remove('show'), 2500);
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
